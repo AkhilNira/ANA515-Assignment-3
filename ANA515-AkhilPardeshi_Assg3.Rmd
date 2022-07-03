@@ -1,0 +1,77 @@
+---
+title: "Assignment 3 - ANA515"
+author: "Akhil Pardeshi"
+date: '2022-07-02'
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+installed.packages("dplyr")
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Q1 - 4
+Saving and loading Data: Setting the Working directory as *McDaniel/ANA 515/Assignment3* and reading the file to "*OGData*"
+
+```{r , echo=TRUE}
+#1. Read CSV
+OGData<- read.csv('StormEvents_details-ftp_v1.0_d1993_c20220425.csv.gz')
+
+#2. Limiting Dataset
+LimitData <- select(OGData,c(1:10,'CZ_NAME','CZ_TYPE','CZ_FIPS','EVENT_TYPE','SOURCE','BEGIN_LAT','BEGIN_LON','END_LAT','END_LON'))
+
+#3. Arrange Data by State Name
+LimitData2<- arrange(LimitData,STATE)
+
+#4. State and County names to Title Case
+LimitData2$STATE = str_to_title(LimitData2$STATE)
+LimitData2$CZ_NAME = str_to_title(LimitData2$CZ_NAME)
+```
+## Q5-7
+
+```{r, echo=TRUE}
+#5. Limiting to "C"
+LimitData3<- filter(LimitData2, CZ_TYPE == "C")
+LimitData3 <- select(LimitData3,-CZ_TYPE)
+
+#6. Pad and Combine State and County FIPS
+LimitData3$STATE_FIPS<- str_pad(LimitData3$STATE_FIPS, width = 3, side = "left", pad = "0")
+LimitData3$CZ_FIPS <- str_pad(LimitData3$CZ_FIPS, width = 3, side = "left", pad = "0")
+LimitData4<- unite(LimitData3,FIPS,'STATE_FIPS','CZ_FIPS', sep = "", remove = TRUE)
+
+#7. Column Names to LowerCase
+LimitData4<- LimitData4 %>% rename_all(tolower)
+```
+
+## Q8-9
+```{r, echo=TRUE}
+#8.Dataframe - State
+Frame1<- data.frame(state.name,state.area,state.region)
+
+#9a. Dataframe Number of events in 1993
+Frame2<- data.frame(table(LimitData4$state))
+
+#9b. Merge Frame2 and Frame1
+Frame1<- rename(Frame1, c("state"="state.name"))
+Frame2<- rename(Frame2, c("state"="Var1"))
+Frame1<- (mutate_all(Frame1,toupper))
+Frame2<- (mutate_all(Frame2,toupper))
+mergedFrame<- merge(x=Frame1, y=Frame2,by.x = "state", by.y = "state")
+
+```
+
+## Q10 Plot
+Convert Area and Frequency data to numeric and then Plot
+```{r pressure, echo=TRUE}
+#Convert Data to Numeric and Plot
+mergedFrame$Freq<- as.numeric(mergedFrame$Freq)
+mergedFrame$state.area<- as.numeric(mergedFrame$state.area)
+
+Plot1<- ggplot(mergedFrame, aes(state.area, Freq,color = state.region))+
+  geom_point()+ labs(x= "Land Area (square miles)", y="# of storm events in 1993")
+Plot1
+```
